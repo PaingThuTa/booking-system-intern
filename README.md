@@ -1,46 +1,15 @@
-## Booking App Intern
+## Booking Web Application (beta)
 
-### Getting Started
+An internal scheduling portal where interns book interview slots and admins manage availability, built with:
 
-1. Install dependencies
+- **Next.js (App Router)** for the user and admin dashboards
+- **Prisma + PostgreSQL** (Neon) for data storage
+- **NextAuth (credentials)** for simple email-based authentication
+- **Tailwind CSS + shadcn/ui** for UI components
 
-   ```bash
-   npm install
-   ```
+### Features
 
-2. Copy `.env.example` to `.env` and fill in the values:
-
-   ```
-   DATABASE_URL=postgres://...
-   NEXTAUTH_URL=http://localhost:3000
-   NEXTAUTH_SECRET=your-long-random-secret
-   GOOGLE_CLIENT_ID=...
-   GOOGLE_CLIENT_SECRET=...
-   ADMIN_EMAILS=user@example.com,user-two@example.com
-   ```
-
-   - Generate `NEXTAUTH_SECRET` with `openssl rand -base64 32`.
-   - Set the Google OAuth redirect URI to `http://localhost:3000/api/auth/callback/google`.
-
-3. Run the development server
-
-   ```bash
-   npm run dev
-   ```
-
-4. Open <http://localhost:3000>. You can sign in with just an email (the account will be created automatically). If Google SSO is configured, the button will also be enabled.
-
-### Production build
-
-```bash
-npm run build
-npm start
-```
-
-Ensure all environment variables (especially `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET`) are set before building.
-
-### Useful Links
-
-- [Next.js Docs](https://nextjs.org/docs)
-- [NextAuth.js Docs](https://next-auth.js.org)
-- [Prisma Docs](https://www.prisma.io/docs)
+- Intern dashboard to browse available time blocks and make/cancel bookings
+- Admin tools to create time blocks, manage capacity, and view bookings per slot
+- Role-based routing in middleware (public, intern, admin sections)
+- Email-only sign-in (Google SSO is currently optional/disabled)
