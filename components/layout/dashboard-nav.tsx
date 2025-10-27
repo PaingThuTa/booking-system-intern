@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import type { Role } from "@prisma/client";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -27,11 +28,22 @@ interface DashboardNavProps {
 
 export function DashboardNav({ role }: DashboardNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const navItems = useMemo(() => NAV_ITEMS.filter((item) => item.roles.includes(role)), [role]);
+
+  useEffect(() => {
+    for (const item of navItems) {
+      router.prefetch(item.href).catch(() => {
+        // Prefetch is best-effort; ignore failures (e.g. dynamic routes).
+      });
+    }
+  }, [navItems, router]);
 
   return (
     <nav className="flex flex-wrap items-center gap-2">
-      {NAV_ITEMS.filter((item) => item.roles.includes(role)).map((item) => {
-        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+      {navItems.map((item) => {
+        const isActive =
+          pathname === item.href || (item.href !== "/admin" && pathname.startsWith(`${item.href}/`));
         return (
           <Link
             key={item.href}
