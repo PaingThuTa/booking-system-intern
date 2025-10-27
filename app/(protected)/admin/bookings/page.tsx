@@ -1,11 +1,18 @@
+import { Role } from "@prisma/client";
+import { redirect } from "next/navigation";
+
 import { AdminBookingsTable, type AdminBooking } from "@/components/admin/bookings-table";
 import prisma from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { auth, defaultRedirectForRole } from "@/lib/auth";
 
 export default async function AdminBookingsPage() {
   const session = await auth();
   if (!session?.user) {
     return null;
+  }
+
+  if (session.user.role !== Role.ADMIN) {
+    redirect(defaultRedirectForRole(session.user.role));
   }
 
   const bookings = await prisma.booking.findMany({

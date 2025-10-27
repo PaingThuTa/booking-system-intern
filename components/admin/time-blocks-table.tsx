@@ -110,10 +110,13 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
     }
 
     const { data } = await response.json();
-    const rawBlocks = Array.isArray(data) ? data : [data];
-    const createdBlocks: AdminTimeBlock[] = rawBlocks.map((block: any) => ({
+    type ApiBlockPayload = Omit<AdminTimeBlock, "bookings"> & {
+      bookings?: AdminTimeBlock["bookings"];
+    };
+    const rawBlocks: ApiBlockPayload[] = Array.isArray(data) ? data : [data];
+    const createdBlocks: AdminTimeBlock[] = rawBlocks.map((block) => ({
       ...block,
-      bookings: block?.bookings ?? [],
+      bookings: block.bookings ?? [],
     }));
 
     setBlocks((prev) => [...prev, ...createdBlocks]);

@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const booking = await prisma.$transaction(async (tx) => {
+    const { booking, wasReactivated } = await prisma.$transaction(async (tx) => {
       const activeBooking = await tx.booking.findFirst({
         where: {
           userId: session.user.id,
@@ -90,7 +90,43 @@ export async function POST(request: Request) {
         throw new Error("This time block is already booked.");
       }
 
-      return tx.booking.create({
+      const existingBooking = await tx.booking.findUnique({
+        where: {
+          userId_timeBlockId: {
+            userId: session.user.id,
+            timeBlockId: parsed.data.timeBlockId,
+          },
+        },
+      });
+
+      if (existingBooking) {
+        if (existingBooking.status === BookingStatus.CONFIRMED) {
+          throw new Error("You already have this time block reserved.");
+        }
+
+        const updatedBooking = await tx.booking.update({
+          where: { id: existingBooking.id },
+          data: {
+            status: BookingStatus.CONFIRMED,
+            createdAt: new Date(),
+          },
+          include: {
+            timeBlock: true,
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                internId: true,
+              },
+            },
+          },
+        });
+
+        return { booking: updatedBooking, wasReactivated: true };
+      }
+
+      const newBooking = await tx.booking.create({
         data: {
           userId: session.user.id,
           timeBlockId: parsed.data.timeBlockId,
@@ -107,9 +143,15 @@ export async function POST(request: Request) {
           },
         },
       });
+
+      return { booking: newBooking, wasReactivated: false };
     });
 
-    await notifyBookingCreated({ bookingId: booking.id, timeBlockId: booking.timeBlockId });
+    if (wasReactivated) {
+      await notifyBookingUpdated({ action: "reinstated", bookingId: booking.id, timeBlockId: booking.timeBlockId });
+    } else {
+      await notifyBookingCreated({ bookingId: booking.id, timeBlockId: booking.timeBlockId });
+    }
 
     return NextResponse.json({ data: booking }, { status: 201 });
   } catch (error) {

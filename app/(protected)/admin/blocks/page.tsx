@@ -1,6 +1,9 @@
+import { Role } from "@prisma/client";
+import { redirect } from "next/navigation";
+
 import { TimeBlocksTable, type AdminTimeBlock } from "@/components/admin/time-blocks-table";
 import prisma from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { auth, defaultRedirectForRole } from "@/lib/auth";
 
 export default async function AdminBlocksPage() {
   const session = await auth();
@@ -8,20 +11,24 @@ export default async function AdminBlocksPage() {
     return null;
   }
 
+  if (session.user.role !== Role.ADMIN) {
+    redirect(defaultRedirectForRole(session.user.role));
+  }
+
   const blocks = await prisma.timeBlock.findMany({
     include: {
       bookings: {
         include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  internId: true,
-                },
-              },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              internId: true,
             },
           },
+        },
+      },
     },
     orderBy: {
       startAt: "asc",

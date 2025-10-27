@@ -3,7 +3,6 @@ import type { Adapter } from "next-auth/adapters";
 import { Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import type { DefaultSession, NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 
 import prisma from "./db";
@@ -34,9 +33,6 @@ declare module "next-auth/jwt" {
     internId?: string | null;
   }
 }
-
-const googleProviderConfigured =
-  Boolean(process.env.GOOGLE_CLIENT_ID) && Boolean(process.env.GOOGLE_CLIENT_SECRET);
 
 export const authOptions: NextAuthOptions = {
   // Cast adapter to v4 Adapter type to satisfy types while using @auth/prisma-adapter
@@ -115,19 +111,6 @@ export const authOptions: NextAuthOptions = {
         return newUser;
       },
     }),
-    ...(googleProviderConfigured
-      ? [
-          GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-            authorization: {
-              params: {
-                prompt: "select_account",
-              },
-            },
-          }),
-        ]
-      : []),
   ],
   callbacks: {
     async signIn({ user }) {

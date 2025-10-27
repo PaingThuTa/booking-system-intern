@@ -14,10 +14,11 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Book a Session", href: "/book", roles: ["INTERN", "ADMIN"] },
-  { label: "My Bookings", href: "/bookings", roles: ["INTERN", "ADMIN"] },
+  { label: "Dashboard", href: "/admin", roles: ["ADMIN"] },
   { label: "Blocks", href: "/admin/blocks", roles: ["ADMIN"] },
   { label: "All Bookings", href: "/admin/bookings", roles: ["ADMIN"] },
+  { label: "Book a Session", href: "/book", roles: ["INTERN"] },
+  { label: "My Bookings", href: "/bookings", roles: ["INTERN"] },
 ];
 
 interface DashboardNavProps {

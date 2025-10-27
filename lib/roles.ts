@@ -5,7 +5,7 @@ export const INTERN_ROUTES = ["/book", "/bookings"] as const;
 export const PUBLIC_ROUTES = ["/", "/login"] as const;
 
 export const DEFAULT_REDIRECT: Record<Role, string> = {
-  ADMIN: "/admin/blocks",
+  ADMIN: "/admin",
   INTERN: "/book",
 };
 
@@ -19,7 +19,7 @@ export const canAccessRoute = (role: Role | undefined, pathname: string) => {
   }
 
   if (INTERN_ROUTES.some((route) => pathname.startsWith(route))) {
-    return role === Role.INTERN || role === Role.ADMIN;
+    return role === Role.INTERN;
   }
 
   return true;

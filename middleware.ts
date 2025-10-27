@@ -1,6 +1,5 @@
 import { Role } from "@prisma/client";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import { withAuth } from "next-auth/middleware";
 import {
   ADMIN_ONLY_ROUTES,
@@ -48,6 +47,11 @@ export default withAuth(
     const role = token.role ?? Role.INTERN;
 
     if (isAdminRoute(pathname) && role !== Role.ADMIN) {
+      const redirectUrl = new URL(DEFAULT_REDIRECT[role], nextUrl.origin);
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    if (isInternRoute(pathname) && role !== Role.INTERN) {
       const redirectUrl = new URL(DEFAULT_REDIRECT[role], nextUrl.origin);
       return NextResponse.redirect(redirectUrl);
     }
