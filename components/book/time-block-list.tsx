@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatTimeRange } from "@/lib/format";
+import { formatTimeRange, minutesToDuration } from "@/lib/format";
 import { BLOCK_CHANGED_EVENT, BOOKING_CREATED_EVENT, BOOKING_UPDATED_EVENT } from "@/lib/realtime-constants";
 import { subscribeToBookingChannel } from "@/lib/realtime-client";
 
@@ -14,8 +14,8 @@ export type TimeBlockView = {
   id: string;
   startAt: string;
   endAt: string;
-  capacity: number;
-  confirmedCount: number;
+  durationMinutes: number;
+  isReserved: boolean;
   hasMyBooking: boolean;
 };
 
@@ -23,7 +23,7 @@ type ApiBlock = {
   id: string;
   startAt: string;
   endAt: string;
-  capacity: number;
+  durationMinutes: number;
   bookings: {
     id: string;
     userId: string;
@@ -83,8 +83,8 @@ export function TimeBlockList({ blocks, existingBookingId, userId }: TimeBlockLi
           id: block.id,
           startAt: block.startAt,
           endAt: block.endAt,
-          capacity: block.capacity,
-          confirmedCount: confirmedBookings.length,
+          durationMinutes: block.durationMinutes,
+          isReserved: confirmedBookings.length > 0,
           hasMyBooking,
         };
       });
@@ -140,10 +140,13 @@ export function TimeBlockList({ blocks, existingBookingId, userId }: TimeBlockLi
           block.id === timeBlockId
             ? {
                 ...block,
-                confirmedCount: block.confirmedCount + 1,
+                isReserved: true,
                 hasMyBooking: true,
               }
-            : { ...block, hasMyBooking: false },
+            : {
+                ...block,
+                hasMyBooking: false,
+              },
         ),
         bookingId: data.id as string,
         feedback: { type: "success", message: "Your session has been reserved." },
@@ -178,7 +181,7 @@ export function TimeBlockList({ blocks, existingBookingId, userId }: TimeBlockLi
           block.hasMyBooking
             ? {
                 ...block,
-                confirmedCount: Math.max(block.confirmedCount - 1, 0),
+                isReserved: false,
                 hasMyBooking: false,
               }
             : block,
@@ -190,15 +193,15 @@ export function TimeBlockList({ blocks, existingBookingId, userId }: TimeBlockLi
   };
 
   const renderAvailability = (block: TimeBlockView) => {
-    const remaining = Math.max(block.capacity - block.confirmedCount, 0);
     if (block.hasMyBooking) {
       return <Badge variant="success">Reserved</Badge>;
     }
-    return remaining > 0 ? (
-      <Badge variant="secondary">{remaining} spot{remaining === 1 ? "" : "s"} left</Badge>
-    ) : (
-      <Badge variant="danger">Full</Badge>
-    );
+
+    if (block.isReserved) {
+      return <Badge variant="danger">Booked</Badge>;
+    }
+
+    return <Badge variant="secondary">Open</Badge>;
   };
 
   return (
@@ -227,12 +230,12 @@ export function TimeBlockList({ blocks, existingBookingId, userId }: TimeBlockLi
           </Card>
         ) : (
           sortedBlocks.map((block) => {
-            const isFull = block.capacity - block.confirmedCount <= 0;
+            const isUnavailable = block.isReserved && !block.hasMyBooking;
             return (
               <Card key={block.id} className="flex flex-col justify-between">
                 <CardHeader>
                   <CardTitle className="text-lg">{formatTimeRange(new Date(block.startAt), new Date(block.endAt))}</CardTitle>
-                  <CardDescription>Capacity: {block.capacity}</CardDescription>
+                  <CardDescription>Duration: {minutesToDuration(block.durationMinutes)}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex items-center justify-between">
                   {renderAvailability(block)}
@@ -248,7 +251,7 @@ export function TimeBlockList({ blocks, existingBookingId, userId }: TimeBlockLi
                   ) : (
                     <Button
                       onClick={() => handleBook(block.id)}
-                      disabled={isPending || isFull || Boolean(state.bookingId)}
+                      disabled={isPending || isUnavailable || Boolean(state.bookingId)}
                       className="ml-3"
                     >
                       Reserve

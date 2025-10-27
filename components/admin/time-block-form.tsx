@@ -14,16 +14,24 @@ interface TimeBlockFormProps {
   defaultValues?: Partial<TimeBlockFormValues>;
   submitLabel: string;
   isPending?: boolean;
+  allowMultiple?: boolean;
   onSubmit: (values: TimeBlockFormValues) => Promise<void> | void;
 }
 
-export function TimeBlockForm({ defaultValues, submitLabel, isPending, onSubmit }: TimeBlockFormProps) {
+export function TimeBlockForm({
+  defaultValues,
+  submitLabel,
+  isPending,
+  allowMultiple = true,
+  onSubmit,
+}: TimeBlockFormProps) {
   const form = useForm<TimeBlockFormValues>({
     resolver: zodResolver(timeBlockFormSchema) as Resolver<TimeBlockFormValues>,
     defaultValues: {
-      startAt: defaultValues?.startAt ?? "",
-      endAt: defaultValues?.endAt ?? "",
-      capacity: defaultValues?.capacity ?? 1,
+      date: defaultValues?.date ?? "",
+      startTime: defaultValues?.startTime ?? "",
+      durationMinutes: defaultValues?.durationMinutes ?? 20,
+      slotCount: defaultValues?.slotCount ?? 1,
       status: defaultValues?.status ?? BlockStatus.ACTIVE,
     },
   });
@@ -33,6 +41,8 @@ export function TimeBlockForm({ defaultValues, submitLabel, isPending, onSubmit 
       control: form.control,
       name: "status",
     }) ?? BlockStatus.ACTIVE;
+  const slotCount = form.watch("slotCount") ?? 1;
+  const durationMinutes = form.watch("durationMinutes") ?? 0;
 
   const submitHandler = form.handleSubmit(async (values) => {
     await onSubmit(values);
@@ -42,30 +52,55 @@ export function TimeBlockForm({ defaultValues, submitLabel, isPending, onSubmit 
   return (
     <form onSubmit={submitHandler} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="startAt">Start</Label>
+        <Label htmlFor="date">Date</Label>
+        <Input id="date" type="date" {...form.register("date")} />
+        {form.formState.errors.date ? (
+          <p className="text-xs text-destructive">{form.formState.errors.date.message}</p>
+        ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="startTime">Start time</Label>
+        <Input id="startTime" type="time" {...form.register("startTime")} />
+        {form.formState.errors.startTime ? (
+          <p className="text-xs text-destructive">{form.formState.errors.startTime.message}</p>
+        ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="durationMinutes">Duration (minutes)</Label>
         <Input
-          id="startAt"
-          type="datetime-local"
-          {...form.register("startAt")}
+          id="durationMinutes"
+          type="number"
+          min={5}
+          max={240}
+          step={5}
+          {...form.register("durationMinutes", { valueAsNumber: true })}
         />
-        {form.formState.errors.startAt ? (
-          <p className="text-xs text-destructive">{form.formState.errors.startAt.message}</p>
+        {form.formState.errors.durationMinutes ? (
+          <p className="text-xs text-destructive">{form.formState.errors.durationMinutes.message}</p>
         ) : null}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="endAt">End</Label>
-        <Input id="endAt" type="datetime-local" {...form.register("endAt")} />
-        {form.formState.errors.endAt ? (
-          <p className="text-xs text-destructive">{form.formState.errors.endAt.message}</p>
+        <Label htmlFor="slotCount">Number of slots</Label>
+        <Input
+          id="slotCount"
+          type="number"
+          min={1}
+          max={24}
+          step={1}
+          readOnly={!allowMultiple}
+          {...form.register("slotCount", { valueAsNumber: true })}
+        />
+        {allowMultiple ? (
+          <p className="text-xs text-muted-foreground">
+            We&apos;ll generate {slotCount} consecutive {durationMinutes} minute slot
+            {slotCount === 1 ? "" : "s"} starting at the selected time.
+          </p>
         ) : null}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="capacity">Capacity</Label>
-        <Input id="capacity" type="number" min={1} max={100} {...form.register("capacity", { valueAsNumber: true })} />
-        {form.formState.errors.capacity ? (
-          <p className="text-xs text-destructive">{form.formState.errors.capacity.message}</p>
+        {form.formState.errors.slotCount ? (
+          <p className="text-xs text-destructive">{form.formState.errors.slotCount.message}</p>
         ) : null}
       </div>
 

@@ -17,7 +17,7 @@ export default async function ProtectedLayout({
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Link href="/" className="text-xl font-semibold tracking-tight">
-              Internship Booking Portal
+              Min Intelligence internship Booking Portal
             </Link>
             <p className="text-sm text-muted-foreground">
               Manage interview availability and reservations in one place.

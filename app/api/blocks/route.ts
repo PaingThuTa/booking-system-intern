@@ -27,6 +27,7 @@ export async function GET(req: Request) {
                   id: true,
                   name: true,
                   email: true,
+                  internId: true,
                 },
               },
             },
@@ -76,13 +77,34 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const block = await prisma.timeBlock.create({
-    data: parsed.data,
+  const { slotCount, ...baseBlock } = parsed.data;
+
+  const blocks = await prisma.$transaction(async (tx) => {
+    const created = [] as Awaited<ReturnType<typeof tx.timeBlock.create>>[];
+    for (let i = 0; i < slotCount; i += 1) {
+      const startAt = new Date(baseBlock.startAt.getTime() + i * baseBlock.durationMinutes * 60_000);
+      const endAt = new Date(startAt.getTime() + baseBlock.durationMinutes * 60_000);
+
+      const block = await tx.timeBlock.create({
+        data: {
+          startAt,
+          endAt,
+          durationMinutes: baseBlock.durationMinutes,
+          status: baseBlock.status,
+        },
+      });
+
+      created.push(block);
+    }
+
+    return created;
   });
 
-  await notifyBlockChanged({ action: "created", blockId: block.id });
+  await Promise.all(
+    blocks.map((block) => notifyBlockChanged({ action: "created", blockId: block.id })),
+  );
 
-  return NextResponse.json({ data: block }, { status: 201 });
+  return NextResponse.json({ data: blocks }, { status: 201 });
 }
 
 export async function PATCH(req: Request) {

@@ -29,6 +29,7 @@ export async function GET() {
           id: true,
           email: true,
           name: true,
+          internId: true,
         },
       },
     },
@@ -85,8 +86,8 @@ export async function POST(request: Request) {
         throw new Error("This time block is no longer available.");
       }
 
-      if (block.bookings.length >= block.capacity) {
-        throw new Error("This time block is fully booked.");
+      if (block.bookings.length > 0) {
+        throw new Error("This time block is already booked.");
       }
 
       return tx.booking.create({
@@ -101,6 +102,7 @@ export async function POST(request: Request) {
               id: true,
               email: true,
               name: true,
+              internId: true,
             },
           },
         },

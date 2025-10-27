@@ -2,13 +2,17 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function EmailLoginForm() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [internId, setInternId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -16,8 +20,8 @@ export function EmailLoginForm() {
     event.preventDefault();
     setError(null);
 
-    if (!email) {
-      setError("Enter your email address to continue.");
+    if (!email || !fullName || !internId) {
+      setError("Please provide your email, full name, and intern ID to continue.");
       return;
     }
 
@@ -25,12 +29,23 @@ export function EmailLoginForm() {
       setIsSubmitting(true);
       const result = await signIn("credentials", {
         email,
-        redirect: true,
-        callbackUrl: "/",
+        fullName,
+        internId,
+        redirect: false,
       });
 
       if (result?.error) {
-        setError("Unable to sign you in. Please try again.");
+        setError(
+          result.error === "CredentialsSignin"
+            ? "Unable to sign you in. Please verify your details."
+            : result.error,
+        );
+        return;
+      }
+
+      if (result?.ok) {
+        router.push("/");
+        router.refresh();
       }
     } catch (submitError) {
       console.error("Failed to sign in with credentials", submitError);
@@ -52,6 +67,31 @@ export function EmailLoginForm() {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="you@example.com"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="fullName">Full name</Label>
+        <Input
+          id="fullName"
+          type="text"
+          autoComplete="name"
+          required
+          value={fullName}
+          onChange={(event) => setFullName(event.target.value)}
+          placeholder="Ada Lovelace"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="internId">Intern ID</Label>
+        <Input
+          id="internId"
+          type="text"
+          required
+          value={internId}
+          onChange={(event) => setInternId(event.target.value)}
+          placeholder="INT-1234"
         />
       </div>
 

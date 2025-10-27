@@ -19,7 +19,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BLOCK_CHANGED_EVENT, BOOKING_CREATED_EVENT, BOOKING_UPDATED_EVENT } from "@/lib/realtime-constants";
 import { subscribeToBookingChannel } from "@/lib/realtime-client";
-import { formatTimeRange, toDateTimeInputValue } from "@/lib/format";
+import { formatTimeRange, minutesToDuration, toDateInputValue, toTimeInputValue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { normalizeTimeBlockFormValues, TimeBlockFormValues } from "@/lib/zod";
 
@@ -27,7 +27,7 @@ export type AdminTimeBlock = {
   id: string;
   startAt: string;
   endAt: string;
-  capacity: number;
+  durationMinutes: number;
   status: BlockStatus;
   bookings: {
     id: string;
@@ -36,6 +36,7 @@ export type AdminTimeBlock = {
       id: string;
       name: string | null;
       email: string;
+      internId: string | null;
     } | null;
   }[];
 };
@@ -87,16 +88,17 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
   const createBlock = async (values: TimeBlockFormValues) => {
     setIsSubmitting(true);
     setFeedback(null);
-    const normalized = normalizeTimeBlockFormValues(values);
+    const { timeBlock, slotCount } = normalizeTimeBlockFormValues(values);
 
     const response = await fetch("/api/blocks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        startAt: normalized.startAt.toISOString(),
-        endAt: normalized.endAt.toISOString(),
-        capacity: normalized.capacity,
-        status: normalized.status,
+        startAt: timeBlock.startAt.toISOString(),
+        endAt: timeBlock.endAt.toISOString(),
+        durationMinutes: timeBlock.durationMinutes,
+        status: timeBlock.status,
+        slotCount,
       }),
     });
 
@@ -108,8 +110,20 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
     }
 
     const { data } = await response.json();
-    setBlocks((prev) => [...prev, { ...data, bookings: [] }]);
-    setFeedback({ type: "success", message: "Time block created." });
+    const rawBlocks = Array.isArray(data) ? data : [data];
+    const createdBlocks: AdminTimeBlock[] = rawBlocks.map((block: any) => ({
+      ...block,
+      bookings: block?.bookings ?? [],
+    }));
+
+    setBlocks((prev) => [...prev, ...createdBlocks]);
+    setFeedback({
+      type: "success",
+      message:
+        (slotCount ?? 1) > 1
+          ? `Created ${(slotCount ?? 1)} time blocks.`
+          : "Time block created.",
+    });
     setCreateOpen(false);
     setIsSubmitting(false);
   };
@@ -117,17 +131,17 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
   const updateBlock = async (blockId: string, values: TimeBlockFormValues) => {
     setIsSubmitting(true);
     setFeedback(null);
-    const normalized = normalizeTimeBlockFormValues(values);
+    const { timeBlock } = normalizeTimeBlockFormValues(values);
 
     const response = await fetch("/api/blocks", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: blockId,
-        startAt: normalized.startAt.toISOString(),
-        endAt: normalized.endAt.toISOString(),
-        capacity: normalized.capacity,
-        status: normalized.status,
+        startAt: timeBlock.startAt.toISOString(),
+        endAt: timeBlock.endAt.toISOString(),
+        durationMinutes: timeBlock.durationMinutes,
+        status: timeBlock.status,
       }),
     });
 
@@ -216,9 +230,9 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
           <TableHeader>
             <TableRow>
               <TableHead>Window</TableHead>
-              <TableHead>Capacity</TableHead>
+              <TableHead>Duration</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Confirmed bookings</TableHead>
+              <TableHead>Reserved by</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -231,18 +245,29 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
               </TableRow>
             ) : (
               sortedBlocks.map((block) => {
-                const confirmedCount = block.bookings.filter((booking) => booking.status === BookingStatus.CONFIRMED).length;
+                const confirmedBooking = block.bookings.find((booking) => booking.status === BookingStatus.CONFIRMED);
                 return (
                   <TableRow key={block.id}>
                     <TableCell className="font-medium">
                       {formatTimeRange(new Date(block.startAt), new Date(block.endAt))}
                     </TableCell>
-                    <TableCell>{block.capacity}</TableCell>
+                    <TableCell>{minutesToDuration(block.durationMinutes)}</TableCell>
                     <TableCell>
                       <Badge variant={statusBadgeVariant[block.status]}>{block.status}</Badge>
                     </TableCell>
                     <TableCell>
-                      {confirmedCount}/{block.capacity}
+                      {confirmedBooking?.user ? (
+                        <div>
+                          <div className="font-medium">
+                            {confirmedBooking.user.name ?? confirmedBooking.user.email}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {confirmedBooking.user.internId ?? confirmedBooking.user.email}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Open</span>
+                      )}
                     </TableCell>
                     <TableCell className="flex justify-end gap-2">
                       <Button
@@ -276,16 +301,18 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit time block</DialogTitle>
-            <DialogDescription>Adjust the timing, capacity, or visibility of this block.</DialogDescription>
+            <DialogDescription>Adjust the timing, duration, or visibility of this block.</DialogDescription>
           </DialogHeader>
           {editingBlock ? (
             <TimeBlockForm
               submitLabel="Save changes"
               isPending={isSubmitting}
+              allowMultiple={false}
               defaultValues={{
-                startAt: toDateTimeInputValue(new Date(editingBlock.startAt)),
-                endAt: toDateTimeInputValue(new Date(editingBlock.endAt)),
-                capacity: editingBlock.capacity,
+                date: toDateInputValue(new Date(editingBlock.startAt)),
+                startTime: toTimeInputValue(new Date(editingBlock.startAt)),
+                durationMinutes: editingBlock.durationMinutes,
+                slotCount: 1,
                 status: editingBlock.status,
               }}
               onSubmit={(values) => updateBlock(editingBlock.id, values)}

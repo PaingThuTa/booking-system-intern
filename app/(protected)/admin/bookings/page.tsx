@@ -15,6 +15,7 @@ export default async function AdminBookingsPage() {
           id: true,
           name: true,
           email: true,
+          internId: true,
         },
       },
       timeBlock: true,
@@ -33,6 +34,7 @@ export default async function AdminBookingsPage() {
       id: booking.timeBlock.id,
       startAt: booking.timeBlock.startAt.toISOString(),
       endAt: booking.timeBlock.endAt.toISOString(),
+      durationMinutes: booking.timeBlock.durationMinutes,
     },
   }));
 

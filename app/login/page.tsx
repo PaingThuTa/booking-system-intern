@@ -29,9 +29,9 @@ export default async function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-12">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-4">
-          <CardTitle className="text-2xl">Welcome to the Internship Portal</CardTitle>
+          <CardTitle className="text-2xl">Welcome to the Min Intelligence internship Portal</CardTitle>
           <CardDescription>
-            Reserve time with our talent team to secure your internship. Sign in with your work or
+            Reserve time with our talent team to secure your Min Intelligence internship. Sign in with your work or
             university Google account to continue.
           </CardDescription>
         </CardHeader>

@@ -1,15 +1,22 @@
-## Booking Web Application (beta)
+## Booking App Intern
 
-An internal scheduling portal where interns book interview slots and admins manage availability, built with:
+An internal scheduling portal where interns reserve interview slots and admins manage availability. The stack includes:
 
-- **Next.js (App Router)** for the user and admin dashboards
-- **Prisma + PostgreSQL** (Neon) for data storage
-- **NextAuth (credentials)** for simple email-based authentication
-- **Tailwind CSS + shadcn/ui** for UI components
+- **Next.js (App Router)** for public, intern, and admin experiences
+- **Prisma + PostgreSQL (Neon)** for data storage
+- **NextAuth (credentials)** for email-based authentication
+- **Tailwind CSS + shadcn/ui** for the interface layer
 
 ### Features
 
-- Intern dashboard to browse available time blocks and make/cancel bookings
-- Admin tools to create time blocks, manage capacity, and view bookings per slot
-- Role-based routing in middleware (public, intern, admin sections)
-- Email-only sign-in (Google SSO is currently optional/disabled)
+- Intern dashboard to browse upcoming time blocks and book/cancel a single session
+- Admin tools to create time blocks with explicit duration, pause availability, and monitor reservations
+- Role-aware middleware to gate routes (public, intern, admin)
+- Email sign-in that collects full name and intern ID, preventing duplicate accounts
+
+### Useful Links
+
+- [Next.js Docs](https://nextjs.org/docs)
+- [NextAuth.js Docs](https://next-auth.js.org)
+- [Prisma Docs](https://www.prisma.io/docs)
+- [Tailwind CSS Docs](https://tailwindcss.com/docs)

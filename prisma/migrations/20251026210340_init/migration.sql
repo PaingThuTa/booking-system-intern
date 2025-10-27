@@ -12,6 +12,7 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "name" TEXT,
+    "internId" TEXT,
     "role" "Role" NOT NULL DEFAULT 'INTERN',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -23,7 +24,7 @@ CREATE TABLE "TimeBlock" (
     "id" TEXT NOT NULL,
     "startAt" TIMESTAMP(3) NOT NULL,
     "endAt" TIMESTAMP(3) NOT NULL,
-    "capacity" INTEGER NOT NULL DEFAULT 1,
+    "durationMinutes" INTEGER NOT NULL,
     "status" "BlockStatus" NOT NULL DEFAULT 'ACTIVE',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -87,6 +88,9 @@ CREATE INDEX "Booking_timeBlockId_idx" ON "Booking"("timeBlockId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Booking_userId_timeBlockId_key" ON "Booking"("userId", "timeBlockId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_internId_key" ON "User"("internId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Account_provider_providerAccountId_key" ON "Account"("provider", "providerAccountId");

@@ -12,15 +12,16 @@ export default async function AdminBlocksPage() {
     include: {
       bookings: {
         include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  internId: true,
+                },
+              },
             },
           },
-        },
-      },
     },
     orderBy: {
       startAt: "asc",
@@ -31,12 +32,17 @@ export default async function AdminBlocksPage() {
     id: block.id,
     startAt: block.startAt.toISOString(),
     endAt: block.endAt.toISOString(),
-    capacity: block.capacity,
+    durationMinutes: block.durationMinutes,
     status: block.status,
     bookings: block.bookings.map((booking) => ({
       id: booking.id,
       status: booking.status,
-      user: booking.user,
+      user: booking.user
+        ? {
+            ...booking.user,
+            internId: booking.user.internId,
+          }
+        : null,
     })),
   }));
 
@@ -45,7 +51,7 @@ export default async function AdminBlocksPage() {
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Manage time blocks</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Create, edit, or retire time blocks to keep the internship calendar accurate and up to date.
+          Create, edit, or retire time blocks to keep the Min Intelligence internship calendar accurate and up to date.
         </p>
       </div>
 

@@ -18,17 +18,20 @@ declare module "next-auth" {
     user: DefaultSession["user"] & {
       id: string;
       role: Role;
+      internId?: string | null;
     };
   }
 
   interface User {
     role: Role;
+    internId?: string | null;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     role?: Role;
+    internId?: string | null;
   }
 }
 
@@ -50,26 +53,61 @@ export const authOptions: NextAuthOptions = {
       name: "Email login",
       credentials: {
         email: { label: "Email", type: "email" },
+        fullName: { label: "Full name", type: "text" },
+        internId: { label: "Intern ID", type: "text" },
       },
       async authorize(credentials) {
         const email = credentials?.email?.trim().toLowerCase();
-        if (!email) {
+        const fullName = credentials?.fullName?.trim();
+        const internIdRaw = credentials?.internId?.trim();
+
+        if (!email || !fullName || !internIdRaw) {
           return null;
         }
+
+        const normalizedInternId = internIdRaw.toUpperCase();
 
         const existingUser = await prisma.user.findUnique({
           where: { email },
         });
 
+        const internIdOwner = await prisma.user.findFirst({
+          where: {
+            internId: normalizedInternId,
+          },
+        });
+
         if (existingUser) {
-          return existingUser;
+          if (existingUser.internId && existingUser.internId !== normalizedInternId) {
+            throw new Error("This account is linked to a different intern ID.");
+          }
+
+          if (internIdOwner && internIdOwner.id !== existingUser.id) {
+            throw new Error("This intern ID is already linked to another account.");
+          }
+
+          const updatedUser = await prisma.user.update({
+            where: { id: existingUser.id },
+            data: {
+              name: fullName,
+              internId: existingUser.internId ?? normalizedInternId,
+            },
+          });
+
+          return updatedUser;
         }
 
         const shouldBeAdmin = adminEmails.has(email);
 
+        if (internIdOwner) {
+          throw new Error("This intern ID is already linked to another account.");
+        }
+
         const newUser = await prisma.user.create({
           data: {
             email,
+            name: fullName,
+            internId: normalizedInternId,
             role: shouldBeAdmin ? Role.ADMIN : Role.INTERN,
           },
         });
@@ -113,16 +151,21 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.role = user.role ?? Role.INTERN;
+        token.internId = user.internId ?? null;
         return token;
       }
 
       if (!token.role && token.sub) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.sub },
-          select: { role: true },
+          select: { role: true, internId: true, name: true },
         });
 
         token.role = dbUser?.role ?? Role.INTERN;
+        token.internId = dbUser?.internId ?? null;
+        if (dbUser?.name) {
+          token.name = dbUser.name;
+        }
       }
 
       return token;
@@ -131,6 +174,10 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.sub ?? "";
         session.user.role = (token.role as Role) ?? Role.INTERN;
+        session.user.internId = token.internId ?? null;
+        if (token.name) {
+          session.user.name = token.name as string;
+        }
       }
 
       return session;

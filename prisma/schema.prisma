@@ -11,6 +11,7 @@ model User {
   id        String    @id @default(cuid())
   email     String    @unique
   name      String?
+  internId  String?   @unique
   role      Role      @default(INTERN)
   bookings  Booking[]
   accounts  Account[]
@@ -22,7 +23,7 @@ model TimeBlock {
   id        String      @id @default(cuid())
   startAt   DateTime
   endAt     DateTime
-  capacity  Int         @default(1)
+  durationMinutes Int
   status    BlockStatus @default(ACTIVE)
   bookings  Booking[]
   createdAt DateTime    @default(now())

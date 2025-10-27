@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatFullDate, formatTimeRange } from "@/lib/format";
+import { formatFullDate, formatTimeRange, minutesToDuration } from "@/lib/format";
 import { BOOKING_CREATED_EVENT, BOOKING_UPDATED_EVENT } from "@/lib/realtime-constants";
 import { subscribeToBookingChannel } from "@/lib/realtime-client";
 
@@ -20,11 +20,13 @@ export type AdminBooking = {
     id: string;
     name: string | null;
     email: string;
+    internId: string | null;
   };
   timeBlock: {
     id: string;
     startAt: string;
     endAt: string;
+    durationMinutes: number;
   };
 };
 
@@ -131,10 +133,18 @@ export function AdminBookingsTable({ initialBookings }: { initialBookings: Admin
                   <TableRow key={booking.id}>
                     <TableCell>
                       <div className="font-medium">{booking.user.name ?? booking.user.email}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {booking.user.internId ? `Intern ID: ${booking.user.internId}` : "Intern ID not provided"}
+                      </p>
                       <p className="text-xs text-muted-foreground">{booking.user.email}</p>
                     </TableCell>
                     <TableCell>
-                      {formatTimeRange(new Date(booking.timeBlock.startAt), new Date(booking.timeBlock.endAt))}
+                      <div className="font-medium">
+                        {formatTimeRange(new Date(booking.timeBlock.startAt), new Date(booking.timeBlock.endAt))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Duration: {minutesToDuration(booking.timeBlock.durationMinutes)}
+                      </p>
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusMeta.variant}>{statusMeta.label}</Badge>

@@ -53,15 +53,15 @@ export default async function BookPage() {
     id: block.id,
     startAt: block.startAt.toISOString(),
     endAt: block.endAt.toISOString(),
-    capacity: block.capacity,
-    confirmedCount: block.bookings.length,
-    hasMyBooking: block.id === existingBooking?.timeBlockId,
+    durationMinutes: block.durationMinutes,
+    isReserved: block.bookings.length > 0,
+    hasMyBooking: block.bookings.some((booking) => booking.userId === session.user.id),
   }));
 
   return (
     <section className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Reserve your internship session</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Reserve your Min Intelligence internship session</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Choose one of the available time blocks below. Once confirmed, you can reschedule by canceling your
           booking and selecting a different slot.

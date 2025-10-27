@@ -7,8 +7,8 @@ import { auth } from "@/lib/auth";
 // Using system fonts via Tailwind's font-sans; no external font fetches
 
 export const metadata: Metadata = {
-  title: "Internship Booking Portal",
-  description: "Streamline internship interview scheduling for admins and candidates.",
+  title: "Min Intelligence internship Booking Portal",
+  description: "Streamline Min Intelligence internship interview scheduling for admins and candidates.",
 };
 
 export default async function RootLayout({
