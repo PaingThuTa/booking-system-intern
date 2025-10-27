@@ -33,9 +33,11 @@ export function DashboardNav({ role }: DashboardNavProps) {
 
   useEffect(() => {
     for (const item of navItems) {
-      router.prefetch(item.href).catch(() => {
+      try {
+        router.prefetch(item.href);
+      } catch {
         // Prefetch is best-effort; ignore failures (e.g. dynamic routes).
-      });
+      }
     }
   }, [navItems, router]);
 
