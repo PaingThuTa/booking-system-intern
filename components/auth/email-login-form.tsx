@@ -66,7 +66,7 @@ export function EmailLoginForm() {
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          placeholder="you@example.com"
+          placeholder="int-xxx@minai.corp"
         />
       </div>
 
