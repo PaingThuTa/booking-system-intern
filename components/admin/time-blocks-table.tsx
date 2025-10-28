@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { BlockStatus, BookingStatus } from "@prisma/client";
-import { Edit3, Plus, Trash2 } from "lucide-react";
+import { Edit3, Plus, Share2, Trash2 } from "lucide-react";
 
 import { TimeBlockForm } from "@/components/admin/time-block-form";
 import { Badge } from "@/components/ui/badge";
@@ -171,6 +171,29 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
     setIsSubmitting(false);
   };
 
+  const copyShareLink = async (block: AdminTimeBlock) => {
+    try {
+      const url = `${window.location.origin}/book?blockId=${block.id}`;
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setFeedback({ type: "success", message: "Time block link copied to clipboard." });
+        return;
+      }
+      const manualCopy = window.prompt("Copy this link", url);
+      if (manualCopy !== null) {
+        setFeedback({ type: "success", message: "Time block link ready to share." });
+      } else {
+        throw new Error("Clipboard API unavailable and manual copy canceled");
+      }
+    } catch (error) {
+      console.error("Failed to copy link", error);
+      setFeedback({
+        type: "error",
+        message: "Unable to copy link. Try again or copy manually.",
+      });
+    }
+  };
+
   const deleteBlock = async (blockId: string) => {
     if (!window.confirm("Delete this time block? Existing bookings will also be removed.")) {
       return;
@@ -273,6 +296,15 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
                       )}
                     </TableCell>
                     <TableCell className="flex justify-end gap-2">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => copyShareLink(block)}
+                        aria-label="Copy shareable link"
+                        disabled={block.status !== BlockStatus.ACTIVE}
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
                       <Button
                         size="icon"
                         variant="ghost"

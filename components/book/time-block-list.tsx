@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatTimeRange, minutesToDuration } from "@/lib/format";
 import { BLOCK_CHANGED_EVENT, BOOKING_CREATED_EVENT, BOOKING_UPDATED_EVENT } from "@/lib/realtime-constants";
 import { subscribeToBookingChannel } from "@/lib/realtime-client";
+import { cn } from "@/lib/utils";
 
 export type TimeBlockView = {
   id: string;
@@ -41,20 +42,39 @@ interface TimeBlockListProps {
   blocks: TimeBlockView[];
   existingBookingId?: string | null;
   userId: string;
+  highlightedBlockId?: string | null;
 }
 
-export function TimeBlockList({ blocks, existingBookingId, userId }: TimeBlockListProps) {
+export function TimeBlockList({
+  blocks,
+  existingBookingId,
+  userId,
+  highlightedBlockId = null,
+}: TimeBlockListProps) {
   const [state, setState] = useState(() => ({
     blocks,
     bookingId: existingBookingId ?? null,
     feedback: null as { type: "error" | "success"; message: string } | null,
   }));
   const [isPending, startTransition] = useTransition();
+  const [activeHighlightId, setActiveHighlightId] = useState<string | null>(highlightedBlockId);
 
   const sortedBlocks = useMemo(
     () => [...state.blocks].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime()),
     [state.blocks],
   );
+
+  useEffect(() => {
+    setActiveHighlightId(highlightedBlockId ?? null);
+  }, [highlightedBlockId]);
+
+  useEffect(() => {
+    if (!highlightedBlockId) return;
+    const element = document.getElementById(`block-${highlightedBlockId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlightedBlockId]);
 
   useEffect(() => {
     const refresh = async () => {
@@ -232,7 +252,14 @@ export function TimeBlockList({ blocks, existingBookingId, userId }: TimeBlockLi
           sortedBlocks.map((block) => {
             const isUnavailable = block.isReserved && !block.hasMyBooking;
             return (
-              <Card key={block.id} className="flex flex-col justify-between">
+              <Card
+                key={block.id}
+                id={`block-${block.id}`}
+                className={cn(
+                  "flex flex-col justify-between transition-shadow",
+                  activeHighlightId === block.id ? "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg" : "",
+                )}
+              >
                 <CardHeader>
                   <CardTitle className="text-lg">{formatTimeRange(new Date(block.startAt), new Date(block.endAt))}</CardTitle>
                   <CardDescription>Duration: {minutesToDuration(block.durationMinutes)}</CardDescription>

@@ -5,7 +5,11 @@ import { TimeBlockList, type TimeBlockView } from "@/components/book/time-block-
 import prisma from "@/lib/db";
 import { auth, defaultRedirectForRole } from "@/lib/auth";
 
-export default async function BookPage() {
+type BookPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function BookPage({ searchParams }: BookPageProps) {
   const session = await auth();
   if (!session?.user) {
     return null;
@@ -63,6 +67,15 @@ export default async function BookPage() {
     hasMyBooking: block.bookings.some((booking) => booking.userId === session.user.id),
   }));
 
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const rawBlockId = resolvedSearchParams.blockId;
+  const highlightedBlockId =
+    typeof rawBlockId === "string" && rawBlockId.length > 0
+      ? rawBlockId
+      : Array.isArray(rawBlockId)
+        ? rawBlockId[0] ?? null
+        : null;
+
   return (
     <section className="space-y-6">
       <div className="space-y-2">
@@ -77,6 +90,7 @@ export default async function BookPage() {
         blocks={sanitizedBlocks}
         existingBookingId={existingBooking?.id}
         userId={session.user.id}
+        highlightedBlockId={highlightedBlockId}
       />
     </section>
   );
