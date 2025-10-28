@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthSessionProvider } from "@/components/providers/session-provider";
 import { auth } from "@/lib/auth";
 
@@ -19,9 +20,11 @@ export default async function RootLayout({
   const session = await auth();
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
-        <AuthSessionProvider session={session}>{children}</AuthSessionProvider>
+        <ThemeProvider>
+          <AuthSessionProvider session={session}>{children}</AuthSessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

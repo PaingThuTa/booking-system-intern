@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { DashboardNav } from "@/components/layout/dashboard-nav";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { auth } from "@/lib/auth";
 
 export default async function ProtectedLayout({
@@ -27,12 +28,15 @@ export default async function ProtectedLayout({
             {session?.user ? (
               <>
                 <DashboardNav role={session.user.role} />
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <span>{session.user.name ?? session.user.email}</span>
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs uppercase tracking-wide text-secondary-foreground">
-                    {session.user.role.toLowerCase()}
-                  </span>
-                  <SignOutButton />
+                <div className="flex items-center gap-3">
+                  <ThemeToggle />
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <span>{session.user.name ?? session.user.email}</span>
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-xs uppercase tracking-wide text-secondary-foreground">
+                      {session.user.role.toLowerCase()}
+                    </span>
+                    <SignOutButton />
+                  </div>
                 </div>
               </>
             ) : null}
