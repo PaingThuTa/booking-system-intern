@@ -4,16 +4,16 @@ const DISPLAY_TIME_ZONE = process.env.NEXT_PUBLIC_DISPLAY_TIME_ZONE ?? "UTC";
 const rangeStartFormatter = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
   month: "short",
   day: "numeric",
-  hour: "2-digit",
+  hour: "numeric",
   minute: "2-digit",
-  hour12: false,
+  hour12: true,
   timeZone: DISPLAY_TIME_ZONE,
 });
 
 const rangeEndFormatter = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
-  hour: "2-digit",
+  hour: "numeric",
   minute: "2-digit",
-  hour12: false,
+  hour12: true,
   timeZone: DISPLAY_TIME_ZONE,
 });
 
@@ -28,9 +28,9 @@ const fullDateFormatter = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
   month: "short",
   day: "numeric",
   year: "numeric",
-  hour: "2-digit",
+  hour: "numeric",
   minute: "2-digit",
-  hour12: false,
+  hour12: true,
   timeZone: DISPLAY_TIME_ZONE,
 });
 
