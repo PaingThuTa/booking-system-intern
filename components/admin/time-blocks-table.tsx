@@ -54,6 +54,7 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<AdminTimeBlock | null>(null);
+  const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([]);
 
   const sortedBlocks = useMemo(
     () => [...blocks].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime()),
@@ -194,27 +195,61 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
     }
   };
 
-  const deleteBlock = async (blockId: string) => {
-    if (!window.confirm("Delete this time block? Existing bookings will also be removed.")) {
+  const deleteBlocks = async (blockIds: string[]) => {
+    if (blockIds.length === 0) {
+      return;
+    }
+
+    const confirmMessage =
+      blockIds.length === 1
+        ? "Delete this time block? Existing bookings will also be removed."
+        : `Delete ${blockIds.length} time blocks? Existing bookings for these blocks will also be removed.`;
+
+    if (!window.confirm(confirmMessage)) {
       return;
     }
 
     setIsSubmitting(true);
     setFeedback(null);
 
-    const response = await fetch(`/api/blocks?id=${blockId}`, { method: "DELETE" });
+    for (const blockId of blockIds) {
+      const response = await fetch(`/api/blocks?id=${blockId}`, { method: "DELETE" });
 
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({ error: { message: "Unable to delete block." } }));
-      setFeedback({ type: "error", message: body?.error?.message ?? "Unable to delete block." });
-      setIsSubmitting(false);
-      return;
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ error: { message: "Unable to delete block." } }));
+        setFeedback({ type: "error", message: body?.error?.message ?? "Unable to delete block." });
+        setIsSubmitting(false);
+        return;
+      }
     }
 
-    setBlocks((prev) => prev.filter((block) => block.id !== blockId));
-    setFeedback({ type: "success", message: "Time block deleted." });
+    setBlocks((prev) => prev.filter((block) => !blockIds.includes(block.id)));
+    setSelectedBlockIds((prev) => prev.filter((id) => !blockIds.includes(id)));
+    setFeedback({
+      type: "success",
+      message: blockIds.length === 1 ? "Time block deleted." : `Deleted ${blockIds.length} time blocks.`,
+    });
     setIsSubmitting(false);
   };
+
+  const toggleBlockSelection = (blockId: string, checked: boolean) => {
+    setSelectedBlockIds((prev) => {
+      if (checked) {
+        if (prev.includes(blockId)) {
+          return prev;
+        }
+        return [...prev, blockId];
+      }
+      return prev.filter((id) => id !== blockId);
+    });
+  };
+
+  const toggleAll = (checked: boolean) => {
+    setSelectedBlockIds(checked ? sortedBlocks.map((block) => block.id) : []);
+  };
+
+  const allSelected = selectedBlockIds.length > 0 && selectedBlockIds.length === sortedBlocks.length;
+  const someSelected = selectedBlockIds.length > 0 && !allSelected;
 
   return (
     <Card>
@@ -223,20 +258,31 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
           <CardTitle className="text-xl">Time blocks</CardTitle>
           <CardDescription>Maintain the interview calendar interns use to reserve their sessions.</CardDescription>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="mr-2 h-4 w-4" /> New block
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create time block</DialogTitle>
-              <DialogDescription>Define a new window of availability for intern sessions.</DialogDescription>
-            </DialogHeader>
-            <TimeBlockForm submitLabel="Create" isPending={isSubmitting} onSubmit={createBlock} />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => deleteBlocks(selectedBlockIds)}
+            disabled={selectedBlockIds.length === 0 || isSubmitting}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete selected
+          </Button>
+          <Dialog open={isCreateOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="mr-2 h-4 w-4" /> New block
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create time block</DialogTitle>
+                <DialogDescription>Define a new window of availability for intern sessions.</DialogDescription>
+              </DialogHeader>
+              <TimeBlockForm submitLabel="Create" isPending={isSubmitting} onSubmit={createBlock} />
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {feedback ? (
@@ -255,6 +301,19 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <input
+                  type="checkbox"
+                  aria-label="Select all time blocks"
+                  checked={allSelected}
+                  ref={(checkbox) => {
+                    if (checkbox) checkbox.indeterminate = someSelected;
+                  }}
+                  onChange={(event) => toggleAll(event.currentTarget.checked)}
+                  disabled={sortedBlocks.length === 0}
+                  className="h-4 w-4 cursor-pointer"
+                />
+              </TableHead>
               <TableHead>Window</TableHead>
               <TableHead>Duration</TableHead>
               <TableHead>Status</TableHead>
@@ -274,6 +333,15 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
                 const confirmedBooking = block.bookings.find((booking) => booking.status === BookingStatus.CONFIRMED);
                 return (
                   <TableRow key={block.id}>
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        aria-label={`Select time block starting ${formatTimeRange(new Date(block.startAt), new Date(block.endAt))}`}
+                        checked={selectedBlockIds.includes(block.id)}
+                        onChange={(event) => toggleBlockSelection(block.id, event.currentTarget.checked)}
+                        className="h-4 w-4 cursor-pointer"
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       {formatTimeRange(new Date(block.startAt), new Date(block.endAt))}
                     </TableCell>
@@ -316,7 +384,7 @@ export function TimeBlocksTable({ initialBlocks }: { initialBlocks: AdminTimeBlo
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => deleteBlock(block.id)}
+                        onClick={() => deleteBlocks([block.id])}
                         aria-label="Delete block"
                         className="text-destructive"
                         disabled={isSubmitting}

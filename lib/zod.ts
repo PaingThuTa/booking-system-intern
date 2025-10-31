@@ -1,6 +1,69 @@
 import { BlockStatus } from "@prisma/client";
 import { z } from "zod";
 
+const DISPLAY_TIME_ZONE = process.env.NEXT_PUBLIC_DISPLAY_TIME_ZONE ?? "UTC";
+
+const getTimeZoneOffsetMinutes = (date: Date, timeZone: string) => {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+
+  const parts = formatter.formatToParts(date);
+  const partValues = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+
+  const utcEquivalent = Date.UTC(
+    Number.parseInt(partValues.year ?? "0", 10),
+    Number.parseInt(partValues.month ?? "1", 10) - 1,
+    Number.parseInt(partValues.day ?? "1", 10),
+    Number.parseInt(partValues.hour ?? "0", 10),
+    Number.parseInt(partValues.minute ?? "0", 10),
+    Number.parseInt(partValues.second ?? "0", 10),
+  );
+
+  return (utcEquivalent - date.getTime()) / 60_000;
+};
+
+const parseDateTimeInDisplayTimeZone = (date: string, time: string) => {
+  const [year, month, day] = date.split("-").map((value) => Number.parseInt(value, 10));
+  const [hour, minute] = time.split(":").map((value) => Number.parseInt(value, 10));
+
+  if ([year, month, day, hour, minute].some((value) => Number.isNaN(value))) {
+    return null;
+  }
+
+  const baseUtcMillis = Date.UTC(year, (month ?? 1) - 1, day ?? 1, hour ?? 0, minute ?? 0);
+  if (!Number.isFinite(baseUtcMillis)) {
+    return null;
+  }
+
+  if (!DISPLAY_TIME_ZONE) {
+    return new Date(baseUtcMillis);
+  }
+
+  try {
+    const baseDate = new Date(baseUtcMillis);
+    let offsetMinutes = getTimeZoneOffsetMinutes(baseDate, DISPLAY_TIME_ZONE);
+    let utcMillis = baseUtcMillis - offsetMinutes * 60_000;
+
+    const adjustedOffset = getTimeZoneOffsetMinutes(new Date(utcMillis), DISPLAY_TIME_ZONE);
+    if (adjustedOffset !== offsetMinutes) {
+      offsetMinutes = adjustedOffset;
+      utcMillis = baseUtcMillis - offsetMinutes * 60_000;
+    }
+
+    return new Date(utcMillis);
+  } catch {
+    return new Date(baseUtcMillis);
+  }
+};
+
 const timeBlockBaseShape = {
   startAt: z.coerce.date(),
   endAt: z.coerce.date(),
@@ -73,8 +136,8 @@ export const timeBlockFormSchema = z
     status: z.nativeEnum(BlockStatus),
   })
   .refine((values) => {
-    const start = new Date(`${values.date}T${values.startTime}`);
-    if (Number.isNaN(start.getTime())) {
+    const start = parseDateTimeInDisplayTimeZone(values.date, values.startTime);
+    if (!start) {
       return false;
     }
     const end = new Date(start.getTime() + values.durationMinutes * 60_000);
@@ -96,7 +159,10 @@ export type TimeBlockPayload = z.infer<typeof timeBlockSchema>;
 export type TimeBlockFormValues = z.infer<typeof timeBlockFormSchema>;
 
 export const normalizeTimeBlockFormValues = (values: TimeBlockFormValues) => {
-  const startAt = new Date(`${values.date}T${values.startTime}`);
+  const startAt = parseDateTimeInDisplayTimeZone(values.date, values.startTime);
+  if (!startAt) {
+    throw new Error("Invalid date or time provided for the time block.");
+  }
   const endAt = new Date(startAt.getTime() + values.durationMinutes * 60_000);
 
   const timeBlock = timeBlockSchema.parse({
